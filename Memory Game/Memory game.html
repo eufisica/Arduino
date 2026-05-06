@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Arduino Memory Game Score</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #111;
+      color: #fff;
+      margin-top: 50px;
+    }
+
+    h1 {
+      font-size: 3em;
+    }
+
+    #score {
+      font-size: 5em;
+      color: #00ffcc;
+    }
+
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      background: #00ffcc;
+      color: #000;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #00ccaa;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎮 Memory Game Score</h1>
+  <div id="score">0</div>
+  <br>
+  <button onclick="connect()">Connect Arduino</button>
+
+  <script>
+    let port;
+    let reader;
+    let buffer = "";
+
+    async function connect() {
+      try {
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 9600 });
+
+        const decoder = new TextDecoderStream();
+        port.readable.pipeTo(decoder.writable);
+        reader = decoder.readable.getReader();
+
+        console.log("Connected to Arduino ✅");
+        readLoop();
+      } catch (err) {
+        console.error("Connection error:", err);
+      }
+    }
+
+    async function readLoop() {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += value;
+
+        let lines = buffer.split("\n");
+        buffer = lines.pop();
+
+        for (let line of lines) {
+          line = line.trim();
+
+          console.log("Received:", line); // debug
+
+          if (line.startsWith("SCORE:")) {
+            let parts = line.split(":");
+
+            if (parts.length > 1) {
+              let score = parts[1];
+              document.getElementById("score").innerText = score;
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>
